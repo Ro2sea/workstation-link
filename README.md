@@ -13,15 +13,22 @@
 
 打开后 1-3 秒自动进入工作台登录页。如果提示「暂时打不开」：等 2-3 分钟再试（页面会自动重试）；仍然打不开就联系沅要最新直连链接。
 
-## 给滢的紧急补救步骤（约 30 秒，手机电脑都行）
+## 给滢的紧急补救步骤（用 Claude Code，小白友好）
 
 当沅不在、员工说打不开时：
 
-1. 向沅要到工作台**新网址**（她微信发你）
-2. 打开 https://github.com/Ro2sea/workstation-link/blob/main/url.txt （用你自己的 GitHub 账号登录，确保已接受仓库邀请）
-3. 点右上角**铅笔图标**，删掉旧网址，粘贴新网址（一行，https 开头）
-4. 点 **Commit changes** → 保持默认选项 → 再点 Commit changes
-5. 完成！员工入口会自动恢复（最迟约 10 分钟，员工页面每 30 秒自动重试，无需通知员工）
+1. 打开你电脑上的 **VSCode**，打开 Claude Code 对话框
+2. 把这句话发进去（把【新网址】换成沅微信发你的网址）：
+
+   > 帮我修复工作台固定入口：把 workstation-link 仓库里的 url.txt 内容改成【新网址】，然后 git 提交并推送到 GitHub。
+
+3. 等 Claude 完成即可。员工页面每 30 秒自动重试，最迟约 10 分钟自动恢复，无需通知员工。
+
+**首次使用前**（只需一次）：先让 Claude 做一次准备，把这句话发进去：
+
+> 请 clone https://github.com/Ro2sea/workstation-link 仓库到我的 D 盘「AA-vibe coding」目录下，并配置好 git 推送环境。
+
+如果 Claude Code 用不了，**备用网页版**：打开 https://github.com/Ro2sea/workstation-link/blob/main/url.txt（用你的 GitHub 账号登录）→ 右上角铅笔图标 → 粘贴新网址 → 点两次 Commit changes。
 
 ## 维护说明
 
