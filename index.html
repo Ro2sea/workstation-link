@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>沅的综合工作台 · 固定入口</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 60%, #a78bfa 100%);
+        font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+        padding: 24px;
+    }
+    .card {
+        background: #fff;
+        border-radius: 20px;
+        box-shadow: 0 20px 60px rgba(30, 10, 60, .35);
+        padding: 40px 36px;
+        max-width: 420px;
+        width: 100%;
+        text-align: center;
+    }
+    .logo {
+        width: 64px; height: 64px;
+        margin: 0 auto 16px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4c1d95, #8b5cf6);
+        position: relative;
+    }
+    .logo::before {
+        content: "";
+        position: absolute; left: 18px; top: 22px;
+        width: 28px; height: 18px;
+        border: 3px solid #fff; border-radius: 4px;
+    }
+    .logo::after {
+        content: "";
+        position: absolute; left: 26px; top: 14px;
+        width: 12px; height: 12px;
+        border: 3px solid #fff; border-radius: 50%;
+        border-top-color: transparent;
+    }
+    h1 { font-size: 22px; color: #1e1b4b; margin-bottom: 8px; }
+    .status { color: #6b7280; font-size: 15px; line-height: 1.7; margin: 12px 0; }
+    .spinner {
+        display: inline-block;
+        width: 22px; height: 22px;
+        margin: 8px auto 4px;
+        border: 3px solid #e5e7eb;
+        border-top-color: #7c3aed;
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .hidden { display: none !important; }
+    .btn {
+        display: inline-block;
+        margin-top: 14px;
+        padding: 10px 28px;
+        border: 0; border-radius: 999px;
+        background: linear-gradient(135deg, #4c1d95, #8b5cf6);
+        color: #fff; font-size: 15px;
+        cursor: pointer;
+        box-shadow: 0 6px 16px rgba(76, 29, 149, .35);
+        transition: transform .12s, box-shadow .12s;
+    }
+    .btn:active { transform: scale(.95); box-shadow: 0 3px 8px rgba(76, 29, 149, .3); }
+    .hint { margin-top: 18px; font-size: 13px; color: #9ca3af; }
+    .hint a { color: #7c3aed; text-decoration: none; word-break: break-all; }
+</style>
+</head>
+<body>
+<div class="card">
+    <div class="logo"></div>
+    <h1>沅的综合工作台</h1>
+    <div id="statusBox">
+        <p class="status">正在连接工作台…</p>
+        <div class="spinner"></div>
+    </div>
+    <div id="failBox" class="hidden">
+        <p class="status" id="failMsg">工作台暂时打不开</p>
+        <button class="btn" id="retryBtn" onclick="load()">重新检测</button>
+        <p class="hint" id="directLink" style="display:none">
+            你也可以试试直接打开：<a id="directHref" href="#" target="_blank"></a>
+        </p>
+        <p class="hint">如持续无法打开，请联系沅获取最新直连链接</p>
+    </div>
+</div>
+<script>
+(function () {
+    'use strict';
+
+    var T_TIMEOUT = 8000;   // 拉取 url.txt 超时
+    var P_TIMEOUT = 5000;   // 检测工作台超时
+    var RETRY_MS = 30000;   // 失败后自动重试间隔
+
+    function show(id) {
+        document.getElementById('statusBox').classList.toggle('hidden', id !== 'statusBox');
+        document.getElementById('failBox').classList.toggle('hidden', id !== 'failBox');
+    }
+
+    function setFail(msg, directUrl) {
+        document.getElementById('failMsg').textContent = msg;
+        var dl = document.getElementById('directLink');
+        if (directUrl) {
+            document.getElementById('directHref').href = directUrl;
+            document.getElementById('directHref').textContent = directUrl;
+            dl.style.display = '';
+        } else {
+            dl.style.display = 'none';
+        }
+        show('failBox');
+    }
+
+    function fetchOk(url, ms) {
+        // AbortSignal.timeout 现代浏览器可用；老浏览器降级为无超时
+        var opt = { cache: 'no-store' };
+        try { opt.signal = AbortSignal.timeout(ms); } catch (e) {}
+        return fetch(url, opt).then(function (r) {
+            if (!r.ok) throw new Error('http ' + r.status);
+            return r;
+        });
+    }
+
+    // 检测某个网址后面是否是真工作台（复用工作台免登录 /ping 接口）
+    function pingStation(url) {
+        return fetchOk(url + '/ping', P_TIMEOUT)
+            .then(function (r) { return r.text(); })
+            .then(function (t) { return t.trim() === 'pong'; })
+            .catch(function () { return false; });
+    }
+
+    function go(url) {
+        try { localStorage.setItem('lastGood', url); } catch (e) {}
+        location.replace(url + '/');
+    }
+
+    function load() {
+        show('statusBox');
+
+        // 快速通道：上次成功跳转过的网址先试试（github.io 偶发打不开时也能进）
+        var lastGood = null;
+        try { lastGood = localStorage.getItem('lastGood'); } catch (e) {}
+        if (lastGood && /^https?:\/\/[^\s"'<>]+$/.test(lastGood)) {
+            pingStation(lastGood).then(function (ok) {
+                if (ok) { go(lastGood); }
+            });
+        }
+
+        fetchOk('url.txt?t=' + Date.now(), T_TIMEOUT)
+            .then(function (r) { return r.text(); })
+            .then(function (text) {
+                var target = text.trim();
+                if (!/^https?:\/\/[^\s"'<>]+$/.test(target)) {
+                    setFail('入口数据异常，正在等待自动恢复…', null);
+                    return Promise.reject(new Error('bad entry'));
+                }
+                return pingStation(target).then(function (ok) {
+                    if (ok) { go(target); }
+                    else { setFail('工作台暂时打不开，将自动重试…', target); }
+                });
+            })
+            .catch(function () {
+                // 只有 fetch url.txt 本身失败才到这里（ping 失败已在上面处理）
+                if (document.getElementById('failBox').classList.contains('hidden')) {
+                    setFail('无法读取入口数据，请检查网络后重试', null);
+                }
+            });
+    }
+
+    load();
+    setInterval(function () {
+        // 失败状态下每 30 秒自动重试（跳转成功后页面已被 replace，不会再跑）
+        if (!document.getElementById('failBox').classList.contains('hidden')) load();
+    }, RETRY_MS);
+})();
+</script>
+</body>
+</html>
